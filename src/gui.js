@@ -214,7 +214,7 @@ function renderPage() {
             <span>AFTER: <span id="score-after" class="font-bold">—</span></span>
           </div>
           <div id="simplification-summary" class="opacity-80 pt-1 border-t border-current border-dashed text-[10px]">
-            [ READABILITY ANALYSIS PENDING ]
+            &gt; READABILITY ANALYSIS PENDING
           </div>
         </div>
 
@@ -369,12 +369,12 @@ function renderPage() {
           if (typeof beforeVal === 'number' && typeof afterVal === 'number') {
             if (afterVal < beforeVal) {
               const diff = (beforeVal - afterVal).toFixed(1);
-              summaryEl.innerHTML = \`<span class="text-green-600 dark:text-green-400 font-bold">✓ Simplified by \${diff} grade levels</span>\`;
+              summaryEl.innerHTML = \`<span style="color: var(--neon-green); font-weight: bold;">&gt; SIMPLIFIED BY \${diff} GRADE LEVELS</span>\`;
             } else {
-              summaryEl.innerHTML = \`<span class="text-amber-600 dark:text-amber-500 font-bold">⚠ No simplification detected</span>\`;
+              summaryEl.innerHTML = \`<span style="color: #f59e0b; font-weight: bold;">&gt; WARNING: NO SIMPLIFICATION DETECTED</span>\`;
             }
           } else {
-            summaryEl.textContent = '[ READABILITY ANALYSIS COMPLETE ]';
+            summaryEl.textContent = '&gt; READABILITY ANALYSIS PENDING';
           }
         }
         
