@@ -1,35 +1,17 @@
 import { ValidationError, ProcessingError } from "./errors.js";
 import { logger } from "./logger.js";
-import { getPatternsForStyle, fillerPatterns, type ReplacementPattern } from "./patterns.js";
+import { getPatternsForStyle, fillerPatterns } from "./patterns.js";
 import {
   calculateReadabilityMetrics,
   getReadabilityDescription,
   splitSentences,
 } from "./readability.js";
 
-export type HumanizeStyle = "balanced" | "casual" | "formal" | "professional" | "technical" | "creative";
-
-export interface HumanizeRequest {
-  text: string;
-  style?: HumanizeStyle;
-}
-
-export interface HumanizeResult {
-  originalText: string;
-  humanizedText: string;
-  style: HumanizeStyle;
-  changes: string[];
-  readability?: {
-    original: string;
-    humanized: string;
-  };
-}
-
-function normalizeWhitespace(text: string): string {
+function normalizeWhitespace(text) {
   return text.replace(/\s+/g, " ").trim();
 }
 
-function preserveCase(replacement: string, match: string): string {
+function preserveCase(replacement, match) {
   if (match.toUpperCase() === match) {
     return replacement.toUpperCase();
   }
@@ -41,12 +23,7 @@ function preserveCase(replacement: string, match: string): string {
   return replacement;
 }
 
-function applyReplacement(
-  text: string,
-  pattern: RegExp,
-  replacement: string,
-  changes: string[]
-): string {
+function applyReplacement(text, pattern, replacement, changes) {
   return text.replace(pattern, (match) => {
     const nextValue = preserveCase(replacement, match);
     if (match !== nextValue) {
@@ -57,29 +34,13 @@ function applyReplacement(
   });
 }
 
-function applyReplacements(
-  text: string,
-  replacements: Array<[RegExp, string]>,
-  changes: string[]
-): string {
-  return replacements.reduce(
-    (currentText, [pattern, replacement]) =>
-      applyReplacement(currentText, pattern, replacement, changes),
-    text
-  );
-}
-
-function applyPatternReplacements(
-  text: string,
-  patterns: import("./patterns.js").ReplacementPattern[],
-  changes: string[]
-): string {
+function applyPatternReplacements(text, patterns, changes) {
   return patterns.reduce((currentText, { pattern, replacement }) => {
     return applyReplacement(currentText, pattern, replacement, changes);
   }, text);
 }
 
-function collapseRepeats(text: string): string {
+function collapseRepeats(text) {
   return text
     .replace(/\b(\w+)(\s+\1\b){1,}/gi, "$1")
     .replace(/\s+,/g, ",")
@@ -88,11 +49,11 @@ function collapseRepeats(text: string): string {
     .replace(/\s+\?/g, "?");
 }
 
-function humanizeSentence(sentence: string, style: HumanizeStyle): string {
+function humanizeSentence(sentence, style) {
   let current = sentence.trim();
 
   if (style !== "formal") {
-    const openerPatterns: Array<[RegExp, string]> = [
+    const openerPatterns = [
       [/^Additionally,\s*/i, "Also, "],
       [/^Moreover,\s*/i, "Also, "],
       [/^However,\s*/i, "But, "],
@@ -110,12 +71,11 @@ function humanizeSentence(sentence: string, style: HumanizeStyle): string {
   return current;
 }
 
-function breakLongSentences(text: string): string {
+function breakLongSentences(text) {
   const sentences = splitSentences(text);
   return sentences.map(sentence => {
     const words = sentence.split(/\s+/);
     if (words.length > 25) {
-      // Find a suitable break point (e.g., after a comma or a conjunction)
       const mid = Math.floor(words.length / 2);
       const breakPoint = words.slice(mid - 5, mid + 5).findIndex(w => /[,;]/.test(w));
       
@@ -133,7 +93,7 @@ function breakLongSentences(text: string): string {
   }).join(" ");
 }
 
-export function humanizeText(request: HumanizeRequest): HumanizeResult {
+export function humanizeText(request) {
   try {
     if (!request.text || typeof request.text !== "string") {
       throw new ValidationError("Text is required and must be a string", "text");
@@ -147,9 +107,9 @@ export function humanizeText(request: HumanizeRequest): HumanizeResult {
       throw new ValidationError("Text is too long (maximum 10,000 characters)", "text");
     }
 
-    const style: HumanizeStyle = request.style ?? "balanced";
+    const style = request.style ?? "balanced";
     const originalText = normalizeWhitespace(request.text);
-    const changes: string[] = [];
+    const changes = [];
 
     logger.info("Starting humanization", {
       textLength: originalText.length,

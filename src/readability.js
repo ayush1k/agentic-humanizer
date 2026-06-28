@@ -1,15 +1,4 @@
-export interface ReadabilityMetrics {
-  fleschKincaidGrade: number;
-  fleschReadingEase: number;
-  averageSentenceLength: number;
-  averageSyllablesPerWord: number;
-  wordCount: number;
-  sentenceCount: number;
-  syllableCount: number;
-  complexity: "simple" | "moderate" | "complex" | "very complex";
-}
-
-export function countSyllables(word: string): number {
+export function countSyllables(word) {
   word = word.toLowerCase().replace(/[^a-z]/g, "");
   if (word.length <= 3) {
     return 1;
@@ -22,16 +11,16 @@ export function countSyllables(word: string): number {
   return Math.max(1, syllables);
 }
 
-export function splitSentences(text: string): string[] {
+export function splitSentences(text) {
   const pieces = text.match(/[^.!?]+[.!?]*/g);
   return pieces?.length ? pieces.map((piece) => piece.trim()).filter(Boolean) : [text];
 }
 
-export function splitWords(text: string): string[] {
+export function splitWords(text) {
   return text.match(/\b[\w'-]+\b/g) || [];
 }
 
-export function calculateReadabilityMetrics(text: string): ReadabilityMetrics {
+export function calculateReadabilityMetrics(text) {
   const sentences = splitSentences(text);
   const words = splitWords(text);
 
@@ -48,7 +37,7 @@ export function calculateReadabilityMetrics(text: string): ReadabilityMetrics {
   const fleschReadingEase =
     206.835 - 1.015 * averageSentenceLength - 84.6 * averageSyllablesPerWord;
 
-  let complexity: "simple" | "moderate" | "complex" | "very complex";
+  let complexity;
   if (fleschKincaidGrade < 8) {
     complexity = "simple";
   } else if (fleschKincaidGrade < 12) {
@@ -71,10 +60,10 @@ export function calculateReadabilityMetrics(text: string): ReadabilityMetrics {
   };
 }
 
-export function getReadabilityDescription(metrics: ReadabilityMetrics): string {
+export function getReadabilityDescription(metrics) {
   const { fleschReadingEase, complexity } = metrics;
 
-  let easeDescription: string;
+  let easeDescription;
   if (fleschReadingEase >= 90) {
     easeDescription = "Very easy to read";
   } else if (fleschReadingEase >= 80) {
@@ -94,12 +83,7 @@ export function getReadabilityDescription(metrics: ReadabilityMetrics): string {
   return `${easeDescription}. Complexity: ${complexity}. Grade level: ${metrics.fleschKincaidGrade.toFixed(1)}`;
 }
 
-export function analyzeSentenceStructure(text: string): {
-  shortSentences: number;
-  mediumSentences: number;
-  longSentences: number;
-  veryLongSentences: number;
-} {
+export function analyzeSentenceStructure(text) {
   const sentences = splitSentences(text);
   const wordsPerSentence = sentences.map((sentence) => splitWords(sentence).length);
 

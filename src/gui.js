@@ -1,11 +1,9 @@
 import http from "node:http";
 import { URL } from "node:url";
-
 import { z } from "zod";
-
-import { humanizeText, type HumanizeRequest } from "./humanize.js";
-import { logger, LogLevel } from "./logger.js";
-import { ValidationError, ProcessingError, NetworkError } from "./errors.js";
+import { logger } from "./logger.js";
+import { ValidationError, ProcessingError } from "./errors.js";
+import { graph } from "../graph/workflow.js";
 
 const GuiRequestSchema = z.object({
   text: z.string().min(1),
@@ -13,7 +11,7 @@ const GuiRequestSchema = z.object({
   proMode: z.boolean().optional(),
 });
 
-function renderPage(): string {
+function renderPage() {
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -148,7 +146,7 @@ function renderPage(): string {
         </pre>
         <div class="flex items-center space-x-2 text-xs font-bold uppercase tracking-[0.2em]">
           <span>[ SYSTEM ONLINE ]</span>
-          <span class="text-slate-500 dark:text-white">v1.1.0-HYBRID</span>
+          <span class="text-slate-500 dark:text-white">v1.1.0-AGENTIC</span>
         </div>
       </div>
       
@@ -243,6 +241,7 @@ function renderPage(): string {
     const themeToggleText = document.getElementById('theme-toggle-text');
     const proToggleBtn = document.getElementById('pro-toggle');
     const proToggleText = document.getElementById('pro-toggle-text');
+    const status = document.getElementById('status');
 
     let proMode = false;
 
@@ -279,7 +278,6 @@ function renderPage(): string {
     const humanizeButton = document.getElementById('humanize');
     const sampleButton = document.getElementById('sample');
     const copyButton = document.getElementById('copy');
-    const status = document.getElementById('status');
     const output = document.getElementById('output');
     const outputPlaceholder = document.getElementById('output-placeholder');
     const changesList = document.getElementById('changes-list');
@@ -355,13 +353,13 @@ function renderPage(): string {
 
       humanizeButton.disabled = true;
       buttonText.textContent = '> EXECUTING_PROTOCOL...';
-      status.textContent = proMode ? '> PROTOCOL: UPLINKING_TO_AI_CORES...' : '> PROTOCOL: INITIALIZING_ENGINE...';
+      status.textContent = '> PROTOCOL: INITIALIZING_WORKFLOW...';
 
       try {
         const response = await fetch('/api/humanize', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text, style: currentStyle, proMode })
+          body: JSON.stringify({ text, style: currentStyle })
         });
 
         if (!response.ok) throw new Error('FAIL_CODE_01');
@@ -374,24 +372,24 @@ function renderPage(): string {
         
         status.textContent = '> PROTOCOL: STREAMING_OUTPUT...';
         
-        typeWriter(data.humanizedText, 0, () => {
+        // Supports both response shapes: result or humanizedText
+        const textToDisplay = data.result || data.humanizedText || '';
+
+        typeWriter(textToDisplay, 0, () => {
           changesList.innerHTML = '';
-          if (data.changes && data.changes.length > 0) {
-            data.changes.forEach(change => {
-              const li = document.createElement('li');
-              li.className = 'flex items-start space-x-2 opacity-70';
-              li.innerHTML = \`<span class="text-cyan-700 dark:text-cyan-400 mt-0.5 font-bold">[+]</span><span>\${change.toUpperCase()}</span>\`;
-              changesList.appendChild(li);
-            });
-            changesList.classList.remove('hidden');
-            changesPlaceholder.classList.add('hidden');
-          } else {
-            changesList.classList.add('hidden');
-            changesPlaceholder.classList.remove('hidden');
-            changesPlaceholder.textContent = 'NO_CHANGES_DETECTED';
-          }
+          const changes = data.changes || ['Agentic workflow rephrasing applied'];
+          
+          changes.forEach(change => {
+            const li = document.createElement('li');
+            li.className = 'flex items-start space-x-2 opacity-70';
+            li.innerHTML = \`<span class="text-cyan-700 dark:text-cyan-400 mt-0.5 font-bold">[+]</span><span>\${change.toUpperCase()}</span>\`;
+            changesList.appendChild(li);
+          });
+          changesList.classList.remove('hidden');
+          changesPlaceholder.classList.add('hidden');
+          
           status.textContent = '> SYS_READY';
-          showToast(data.proMode ? 'PRO_PROTOCOL_SUCCESS' : 'LOCAL_PROTOCOL_SUCCESS');
+          showToast('AGENTIC_PROTOCOL_SUCCESS');
         });
 
       } catch (error) {
@@ -414,18 +412,16 @@ function renderPage(): string {
 </html>`;
 }
 
-async function readJsonBody(request: http.IncomingMessage): Promise<unknown> {
-  const chunks: Buffer[] = [];
-
+async function readJsonBody(request) {
+  const chunks = [];
   for await (const chunk of request) {
     chunks.push(Buffer.from(chunk));
   }
-
   const raw = Buffer.concat(chunks).toString("utf8");
   return raw ? JSON.parse(raw) : {};
 }
 
-function sendJson(response: http.ServerResponse, statusCode: number, payload: unknown): void {
+function sendJson(response, statusCode, payload) {
   response.writeHead(statusCode, {
     "Content-Type": "application/json; charset=utf-8",
     "Cache-Control": "no-store",
@@ -433,7 +429,7 @@ function sendJson(response: http.ServerResponse, statusCode: number, payload: un
   response.end(JSON.stringify(payload));
 }
 
-export async function startGuiServer(port: number): Promise<http.Server> {
+export async function startGuiServer(port) {
   const server = http.createServer(async (request, response) => {
     if (!request.url) {
       response.writeHead(400);
@@ -458,105 +454,69 @@ export async function startGuiServer(port: number): Promise<http.Server> {
     }
 
     if (request.method === "POST" && url.pathname === "/api/humanize") {
+      // Mock Express req and res objects for compatibility with requirements 3, 4, 5, and 6
+      const req = {
+        body: {}
+      };
+      
+      const res = {
+        status: function(code) {
+          this.statusCode = code;
+          return this;
+        },
+        json: function(payload) {
+          sendJson(response, this.statusCode || 200, payload);
+        },
+        statusCode: 200
+      };
+
       try {
-        const body = GuiRequestSchema.parse(await readJsonBody(request));
+        req.body = await readJsonBody(request);
 
-        if (!body.text || body.text.trim().length === 0) {
-          throw new ValidationError("Text cannot be empty", "text");
+        const text = req.body.text;
+        const style = req.body.style || "balanced";
+
+        if (!text || text.trim().length === 0) {
+          return res.status(400).json({ error: "Text cannot be empty" });
         }
 
-        if (body.text.length > 10000) {
-          throw new ValidationError("Text is too long (maximum 10,000 characters)", "text");
+        if (text.length > 10000) {
+          return res.status(400).json({ error: "Text is too long (maximum 10,000 characters)" });
         }
 
-        if (body.style && !["balanced", "casual", "formal", "professional", "technical", "creative"].includes(body.style)) {
-          throw new ValidationError("Invalid style specified", "style");
-        }
-
-        logger.info("Processing humanize request", {
-          textLength: body.text.length,
-          style: body.style || "balanced",
-          proMode: !!body.proMode
+        logger.info("Processing humanize request in workflow", {
+          textLength: text.length,
+          style: style
         });
 
-        let result;
-        if (body.proMode) {
-          const humanizeUrl = "https://api.edgeshop.ai/rewrite/humanize";
-          const proResult = await (async () => {
-             // Re-using the makeRequest-like logic directly here or we could export it
-             // For simplicity, we'll call the humanizeText engine as fallback if fetch fails
-             try {
-               const response = await fetch(humanizeUrl, {
-                 method: 'POST',
-                 headers: { 'Content-Type': 'application/json' },
-                 body: JSON.stringify({ text: body.text, style: body.style || "balanced" })
-               });
-               if (response.ok) return await response.json();
-             } catch (e) {
-               logger.error("Failed to fetch pro humanization", { error: e });
-             }
-             return null;
-          })();
+        // Invoke the compiled LangGraph workflow
+        const finalState = await graph.invoke({ rawText: text });
 
-          if (proResult && proResult.humanizedText) {
-            result = {
-              originalText: body.text,
-              humanizedText: proResult.humanizedText,
-              style: body.style || "balanced",
-              changes: ["AI Semantic Rewriting Applied"],
-              proMode: true
-            };
-          }
-        }
-
-        if (!result) {
-          result = humanizeText(body as HumanizeRequest);
-        }
-
-        logger.info("Successfully processed humanize request", {
-          originalLength: result.originalText.length,
-          humanizedLength: result.humanizedText.length,
-          changesCount: result.changes.length,
-          proMode: !!(result as any).proMode
+        // Return the final draftText from the graph's output state as the JSON response
+        return res.json({
+          result: finalState.draftText,
+          // Support UI client keys for complete compatibility:
+          humanizedText: finalState.draftText,
+          changes: ["Agentic workflow rephrasing applied"],
+          proMode: true
         });
 
-        sendJson(response, 200, result);
       } catch (error) {
-        logger.error("Error processing humanize request", { error });
-
-        if (error instanceof z.ZodError) {
-          const message = error.errors
-            .map((e) => `${e.path.join(".")}: ${e.message}`)
-            .join(", ");
-          sendJson(response, 400, {
-            error: "Invalid request format",
-            details: message,
-          });
-        } else if (error instanceof ValidationError) {
-          sendJson(response, 400, {
-            error: error.message,
-            field: error.field,
-          });
-        } else if (error instanceof ProcessingError) {
-          sendJson(response, 500, {
-            error: "Failed to process text",
-            details: error.message,
-          });
-        } else {
-          sendJson(response, 500, {
-            error: "An unexpected error occurred",
-            details: error instanceof Error ? error.message : "Unknown error",
-          });
-        }
+        logger.error("Error processing humanize request in workflow router", { error });
+        
+        // If Hugging Face API times out or the graph fails, return a 500 status with a clean JSON error message
+        return res.status(500).json({
+          error: "Failed to process text",
+          details: error instanceof Error ? error.message : "Unknown error occurred inside the agentic workflow"
+        });
       }
-      return;
     }
 
     response.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
     response.end("Not found");
   });
 
-  await new Promise<void>((resolve) => {
+  await new Promise((resolve) => {
     server.listen(port, resolve);
   });
 

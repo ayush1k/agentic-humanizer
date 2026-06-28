@@ -1,42 +1,32 @@
-export enum LogLevel {
-  ERROR = "ERROR",
-  WARN = "WARN",
-  INFO = "INFO",
-  DEBUG = "DEBUG",
-}
-
-interface LogEntry {
-  level: LogLevel;
-  message: string;
-  timestamp: string;
-  context?: Record<string, unknown>;
-  error?: Error;
-}
+export const LogLevel = {
+  ERROR: "ERROR",
+  WARN: "WARN",
+  INFO: "INFO",
+  DEBUG: "DEBUG",
+};
 
 class Logger {
-  private level: LogLevel;
-  private logs: LogEntry[] = [];
-  private maxLogs: number = 100;
+  constructor(level = LogLevel.INFO) {
+    this.level = level;
+    this.logs = [];
+    this.maxLogs = 100;
+  }
 
-  constructor(level: LogLevel = LogLevel.INFO) {
+  setLevel(level) {
     this.level = level;
   }
 
-  setLevel(level: LogLevel): void {
-    this.level = level;
-  }
-
-  private shouldLog(level: LogLevel): boolean {
+  shouldLog(level) {
     const levels = [LogLevel.ERROR, LogLevel.WARN, LogLevel.INFO, LogLevel.DEBUG];
     return levels.indexOf(level) <= levels.indexOf(this.level);
   }
 
-  private log(level: LogLevel, message: string, context?: Record<string, unknown>, error?: Error): void {
+  log(level, message, context, error) {
     if (!this.shouldLog(level)) {
       return;
     }
 
-    const entry: LogEntry = {
+    const entry = {
       level,
       message,
       timestamp: new Date().toISOString(),
@@ -67,33 +57,33 @@ class Logger {
     }
   }
 
-  error(message: string, context?: Record<string, unknown>, error?: Error): void {
+  error(message, context, error) {
     this.log(LogLevel.ERROR, message, context, error);
   }
 
-  warn(message: string, context?: Record<string, unknown>): void {
+  warn(message, context) {
     this.log(LogLevel.WARN, message, context);
   }
 
-  info(message: string, context?: Record<string, unknown>): void {
+  info(message, context) {
     this.log(LogLevel.INFO, message, context);
   }
 
-  debug(message: string, context?: Record<string, unknown>): void {
+  debug(message, context) {
     this.log(LogLevel.DEBUG, message, context);
   }
 
-  getLogs(): LogEntry[] {
+  getLogs() {
     return [...this.logs];
   }
 
-  clearLogs(): void {
+  clearLogs() {
     this.logs = [];
   }
 }
 
 export const logger = new Logger();
 
-export function setLogLevel(level: LogLevel): void {
+export function setLogLevel(level) {
   logger.setLevel(level);
 }

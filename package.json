@@ -7,24 +7,23 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.0.3",
-    "zod": "^3.24.1"
-  },
-  "devDependencies": {
-    "@types/node": "^22.10.2",
-    "typescript": "^5.7.2"
+    "@huggingface/inference": "^4.13.20",
+    "@langchain/community": "^1.1.29",
+    "@langchain/core": "^1.2.1",
+    "@langchain/google-genai": "^2.2.0",
+    "@langchain/langgraph": "^1.4.7",
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "zod": "^3.25.76"
   },
   "type": "module",
   "bin": {
-    "ai-humanizer-mcp-server": "./build/index.js"
+    "ai-humanizer-mcp-server": "./src/index.js"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "tsc && node -e \"require('fs').chmodSync('build/index.js', '755')\"",
-    "start": "node build/index.js",
-    "gui": "node build/index.js --gui"
+    "start": "node src/index.js --gui"
   },
   "files": [
-    "build"
+    "src"
   ]
 }

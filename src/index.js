@@ -8,7 +8,7 @@ import {
 import { humanizeText } from "./humanize.js";
 import { defaultGuiPort, startGuiServer } from "./gui.js";
 import { z } from "zod";
-import { logger, LogLevel } from "./logger.js";
+import { logger } from "./logger.js";
 import { ValidationError, ProcessingError, NetworkError } from "./errors.js";
 
 const API_BASE = "https://api.edgeshop.ai";
@@ -47,58 +47,58 @@ const server = new Server(
 server.setRequestHandler(ListToolsRequestSchema, async () => {
   return {
     tools: [
-        {
-            name: "detect",
-            description: "Detect whether the text is AI-generated.Show to user the task detail url. Extract the taskId field, then concatenate the link in the following format: https://pre-www.text2go.ai/?utm_source=claude_mcp&taskId={taskId}",
-            inputSchema: {
-              type: "object",
-              properties: {
-                type: {
-                  type: "string",
-                  enum: ["original_text"],
-                },
-                text: {
-                  type: "string",
-                },
-                detectionTypeList: {
-                  type: "array",
-                  items: {
-                    type: "string",
-                    enum: ["COPYLEAKS", "HEMINGWAY"],
-                  },
-                },
-              },
-              required: ["type", "text", "detectionTypeList"],
+      {
+        name: "detect",
+        description: "Detect whether the text is AI-generated.Show to user the task detail url. Extract the taskId field, then concatenate the link in the following format: https://pre-www.text2go.ai/?utm_source=claude_mcp&taskId={taskId}",
+        inputSchema: {
+          type: "object",
+          properties: {
+            type: {
+              type: "string",
+              enum: ["original_text"],
             },
-          }
-        ,{
-            name: "humanize",
-            description: "Rewrite text so it sounds more natural and human.",
-            inputSchema: {
-              type: "object",
-              properties: {
-                text: {
-                  type: "string",
-                },
-                style: {
-                  type: "string",
-                  enum: ["balanced", "casual", "formal", "professional", "technical", "creative"],
-                  default: "balanced",
-                },
-                proMode: {
-                  type: "boolean",
-                  description: "Use advanced AI for semantic rewriting (requires internet).",
-                  default: false,
-                }
-              },
-              required: ["text"],
+            text: {
+              type: "string",
             },
-          }
+            detectionTypeList: {
+              type: "array",
+              items: {
+                type: "string",
+                enum: ["COPYLEAKS", "HEMINGWAY"],
+              },
+            },
+          },
+          required: ["type", "text", "detectionTypeList"],
+        },
+      },
+      {
+        name: "humanize",
+        description: "Rewrite text so it sounds more natural and human.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            text: {
+              type: "string",
+            },
+            style: {
+              type: "string",
+              enum: ["balanced", "casual", "formal", "professional", "technical", "creative"],
+              default: "balanced",
+            },
+            proMode: {
+              type: "boolean",
+              description: "Use advanced AI for semantic rewriting (requires internet).",
+              default: false,
+            }
+          },
+          required: ["text"],
+        },
+      }
     ],
   };
 });
 
-async function makeRequest<T>(url: string, data?: any): Promise<T | null> {
+async function makeRequest(url, data) {
   const headers = {
     "User-Agent": USER_AGENT,
     "Accept": "application/json",
@@ -124,7 +124,7 @@ async function makeRequest<T>(url: string, data?: any): Promise<T | null> {
       throw new NetworkError(`HTTP error! status: ${response.status}`, response.status);
     }
 
-    const result = (await response.json()) as T;
+    const result = await response.json();
     logger.info("External API request successful", { url });
 
     return result;
@@ -154,7 +154,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       });
 
       const detectUrl = `${API_BASE}/rewrite/text-detection`;
-      const detectData = await makeRequest<AiDetectResponse>(detectUrl, argument);
+      const detectData = await makeRequest(detectUrl, argument);
 
       if (!detectData) {
         logger.error("Failed to retrieve detection data", { url: detectUrl });
@@ -195,7 +195,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       let result;
       if (argument.proMode) {
         const humanizeUrl = `${API_BASE}/rewrite/humanize`;
-        const proResult = await makeRequest<any>(humanizeUrl, {
+        const proResult = await makeRequest(humanizeUrl, {
           text: argument.text,
           style: argument.style || "balanced"
         });
@@ -221,7 +221,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         originalLength: result.originalText.length,
         humanizedLength: result.humanizedText.length,
         changesCount: result.changes.length,
-        proMode: !!(result as any).proMode,
+        proMode: !!result.proMode,
       });
 
       return {
@@ -265,37 +265,6 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     throw error;
   }
 });
-
-interface AiDetectResponse {
-  detectionType: 'COPYLEAKS' | 'HEMINGWAY' | 'GRAMMARLY' | 'AI_SYNTAGMAS';
-  detectionResult: CopyleaksResult | HemingwayResult | GrammarlyResult | AiSyntagmasResult;
-}
-
-interface CopyleaksResult {
-  totalWords: string;
-  creationTime: string;
-  modelVersion: string;
-  probability: string;
-  scanId: string;
-  ai: string;
-  classification: string;
-  human: string;
-}
-
-interface HemingwayResult {
-  sentences: string;
-  grade: string;
-  words: string;
-  letters: string;
-}
-
-interface GrammarlyResult {
-  score: string;
-}
-
-interface AiSyntagmasResult {
-  markedText: string;
-}
 
 // Start the server
 async function main() {

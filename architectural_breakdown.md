@@ -7,9 +7,9 @@ This document provides a textbook-level architectural breakdown of the **AI Huma
 ## Phase 1: The Executive Blueprint
 
 ### 1. The Core Problem
-Generative AI writing (e.g., LLM outputs) often exhibits statistical and stylistic patterns (clichés, predictable sentence lengths, passive voice) that make it easily flaggable by classifiers (like Copyleaks) or read as unnatural to humans. 
+Generative AI writing (e.g., LLM outputs) often exhibits statistical and stylistic patterns (clichés, predictable sentence lengths, passive voice) that make it easily flaggable by classifiers or read as unnatural to humans. 
 
-This repository solves this problem by providing a **dual-interface, hybrid text rewriting utility** that strips out typical AI idioms, shortens convoluted sentences, dynamically injects casual/creative/technical syntax depending on the target tone, and tracks Flesch-Kincaid readability metrics. It functions both as an **interactive web-based GUI** and as an **integration-ready Model Context Protocol (MCP) server** for AI assistants (like Claude).
+This repository solves this problem by providing a **dual-interface, hybrid text rewriting utility** that strips out typical AI idioms, shortens convoluted sentences, dynamically injects casual/creative/technical syntax depending on the target tone, and tracks Flesch-Kincaid readability metrics. It functions both as an **interactive web-based GUI** and as an **integration-ready Model Context Protocol (MCP) server** for AI assistants.
 
 ### 2. High-Level Tech Stack
 
@@ -20,71 +20,80 @@ graph TD
         MCPClient[MCP Client e.g. Claude Desktop / Antigravity]
     end
 
-    subgraph Host Application (Node.js/TypeScript Engine)
-        Index[src/index.ts - Main Entry Point]
-        GuiServer[src/gui.ts - HTTP Server]
-        MCPServer[MCP Server - SDK Registry]
-        LocalEngine[src/humanize.ts - Rules-based Rewrite Core]
+    subgraph Host Application (Node.js/ES6 Engine)
+        Index[src/index.js - Main Entry Point]
+        GuiServer[src/gui.js - HTTP Server]
+        MCPServer[mcp-server/index.js - MCP SDK Server]
+        Workflow[graph/workflow.js - LangGraph Orchestrator]
     end
 
-    subgraph External Dependencies
-        EdgeShop[EdgeShop AI Core - https://api.edgeshop.ai]
+    subgraph LangGraph Multi-Agent Workflow
+        Profiler[agents/profiler.js - Qwen/Qwen2.5-7B-Instruct]
+        Paraphraser[agents/paraphraser.js - meta-llama/Meta-Llama-3-8B-Instruct]
+        Critic[agents/critic.js - meta-llama/Meta-Llama-3-8B-Instruct]
     end
 
     Browser -->|HTTP POST /api/humanize| GuiServer
     MCPClient -->|STDIO JSON-RPC 2.0| MCPServer
-    GuiServer -->|Call Engine / Pro Mode| LocalEngine
-    MCPServer -->|Call Engine / Pro Mode| LocalEngine
-    LocalEngine -.->|HTTP POST Fallback| EdgeShop
-    GuiServer -.->|HTTP POST Pro Mode| EdgeShop
+    GuiServer -->|Invoke workflow| Workflow
+    Workflow --> Profiler
+    Profiler -->|Directive| Paraphraser
+    Paraphraser -->|Draft Text| Critic
+    Critic -->|Rejected + Feedback| Paraphraser
+    Critic -->|Approved| Workflow
+    Paraphraser -.->|Fetch patterns tool call| MCPServer
 ```
 
-*   **Runtime:** Node.js (v20 Alpine for production Docker builds).
-*   **Language:** TypeScript (configured for ES modules in `tsconfig.json`).
+*   **Runtime:** Node.js (v20 Alpine).
+*   **Language:** Vanilla JavaScript (ES6 ESModules).
 *   **Protocol Support:** Model Context Protocol (MCP) SDK v1.x (via JSON-RPC over `stdio` transport).
-*   **Web Framework:** Vanilla Node.js `http` module. No heavy frameworks (like Express or Fastify) are utilized; routing and payload parsing are written using native Node streams to minimize bundle size.
-*   **UI/Styling:** Tailwind CSS (loaded via CDN) coupled with custom CRT scanline/glow styles. Monospaced rendering utilizes the `Fira Code` typography.
-*   **Validation:** Zod (`z`) for runtime request validation and schema definition.
-*   **External Integration:** Upstream semantic AI rewrite engine hosted at `https://api.edgeshop.ai`.
+*   **Agentic Orchestration:** `@langchain/langgraph` (v1.x) managing StateGraph cycles.
+*   **Inference Pipeline:** `@langchain/community/llms/hf` and `@huggingface/inference` invoking Hugging Face Serverless API endpoints (`Qwen/Qwen2.5-7B-Instruct` and `meta-llama/Meta-Llama-3-8B-Instruct`).
+*   **Validation:** Zod (`z`) for runtime request validation and MCP tool schema checking.
 
 ---
 
 ## Phase 2: The Skeleton & Entry Points
 
 ### 1. Macro Directory Structure
-The workspace is intentionally lightweight, featuring a flat `src/` directory containing all logic, eliminating boilerplate nesting:
+The workspace is structured entirely in ES6 vanilla JS modules:
 
-*   **`/src`**: Contains all TypeScript source code.
-    *   [`index.ts`](file:///workspaces/humanizer/src/index.ts): Main CLI execution context and MCP SDK Server setup.
-    *   [`gui.ts`](file:///workspaces/humanizer/src/gui.ts): Embedded HTTP static asset server and API router.
-    *   [`humanize.ts`](file:///workspaces/humanizer/src/humanize.ts): State machine and processing orchestrator for rewriting.
-    *   [`patterns.ts`](file:///workspaces/humanizer/src/patterns.ts): Constant dictionary of regex replacements mapped to target styles.
-    *   [`readability.ts`](file:///workspaces/humanizer/src/readability.ts): Flesch-Kincaid reading ease and grade calculator.
-    *   [`logger.ts`](file:///workspaces/humanizer/src/logger.ts): Simple global logging utility with severity level filtering.
-    *   [`errors.ts`](file:///workspaces/humanizer/src/errors.ts): Custom domain exceptions (`ValidationError`, `NetworkError`, etc.).
-*   **`/build`**: Compiled target output (JavaScript ES Modules) generated by the TypeScript compiler (`tsc`).
-*   **`Dockerfile`**: Defines a two-stage build pipeline (`builder` and `runtime`) targeting `node:20-alpine`.
+- **`/src`**: Contains primary bootstrapper code.
+    - [`index.js`](file:///workspaces/agentic-humanizer/src/index.js): Main CLI execution context and MCP SDK Server setup.
+    - [`gui.js`](file:///workspaces/agentic-humanizer/src/gui.js): Embedded HTTP server and API router (triggers the LangGraph workflow).
+    - [`humanize.js`](file:///workspaces/agentic-humanizer/src/humanize.js): Classical rules-based pipeline.
+    - [`patterns.js`](file:///workspaces/agentic-humanizer/src/patterns.js): Constant dictionaries of style regex patterns.
+    - [`readability.js`](file:///workspaces/agentic-humanizer/src/readability.js): Flesch-Kincaid calculator.
+    - [`logger.js`](file:///workspaces/agentic-humanizer/src/logger.js): Simple global logger.
+    - [`errors.js`](file:///workspaces/agentic-humanizer/src/errors.js): App validation and processing exceptions.
+- **`/mcp-server`**: Contains local MCP components.
+    - [`index.js`](file:///workspaces/agentic-humanizer/mcp-server/index.js): Exposes the `get_humanizer_patterns` tool with strict Zod validation.
+- **`/agents`**: LangGraph nodes.
+    - [`profiler.js`](file:///workspaces/agentic-humanizer/agents/profiler.js): Analyzes raw text style.
+    - [`paraphraser.js`](file:///workspaces/agentic-humanizer/agents/paraphraser.js): Rewrites draft using patterns and LLM instructions.
+    - [`critic.js`](file:///workspaces/agentic-humanizer/agents/critic.js): Reviews quality and controls loop iteration.
+- **`/graph`**: LangGraph state definitions.
+    - [`workflow.js`](file:///workspaces/agentic-humanizer/graph/workflow.js): StateGraph compilation.
 
 ### 2. Execution Entry Points & Lifecycle
-The application lifecycle begins at [`src/index.ts`](file:///workspaces/humanizer/src/index.ts).
+The application lifecycle begins at [`src/index.js`](file:///workspaces/agentic-humanizer/src/index.js).
 
 ```mermaid
 sequenceDiagram
     participant OS as Operating System
-    participant Index as src/index.ts
-    participant Gui as src/gui.ts
+    participant Index as src/index.js
+    participant Gui as src/gui.js
+    participant Workflow as graph/workflow.js
     participant MCP as MCP SDK Transport
     
-    OS->>Index: Invoke "node build/index.js [--gui]"
+    OS->{Index: Invoke "node src/index.js [--gui]"
     activate Index
-    Index->>Index: Init Logger & Schemas
     
     alt Arg Includes "--gui"
         Index->>Gui: startGuiServer(port)
         activate Gui
-        Gui-->>Index: Node HTTP Server Instance (Active)
+        Gui-->>Index: HTTP Server Instance (Active)
         deactivate Gui
-        Note over Index: Console message printed to stderr: "Humanizer GUI running..."
     end
     
     Index->>MCP: Connect StdioServerTransport
@@ -92,89 +101,66 @@ sequenceDiagram
     Note over MCP: Listen for stdin JSON-RPC frames
     deactivate MCP
     deactivate Index
+    
+    Note over Gui: POST /api/humanize received
+    Gui->>Workflow: graph.invoke({ rawText })
+    activate Workflow
+    Workflow-->>Gui: finalState ({ draftText })
+    deactivate Workflow
+    Gui-->>OS: Return JSON response
 ```
-
-*   **Dual Bootstrapping:** The process starts the MCP server over standard input/output (`StdioServerTransport`). If the `--gui` command-line argument is passed, it concurrently spawns the HTTP daemon.
-*   **GUI Process Teardown:** A `process.on("exit")` trap is registered in `index.ts` to cleanly invoke `.close()` on the HTTP server to release the socket.
 
 ---
 
-## Phase 3: Data Flow & Architectural Mechanics
+## Phase 3: Data Flow & Agentic Mechanics
 
-### 1. The Humanization Pipeline (Local Rule-Based Mode)
-When a rewrite request is received, the data undergoes sequential processing:
+### 1. The Multi-Agent Humanization Loop
+When a rewrite request hits the HTTP API router, the data undergoes loop-based processing:
 
 ```mermaid
 flowchart TD
-    Raw[Raw Text Input] --> Norm[Normalize Whitespace]
-    Norm --> StyleP[Apply Tone-Specific Regex replacements]
-    StyleP --> Coll[Collapse Repeats & Fix Punctuation Whitespace]
-    Coll --> Split[Split into Sentences via Readability Parser]
-    Split --> SOpen[Apply Opener Replacements to each sentence]
-    SOpen --> Break[Segment Long Sentences >25 words]
-    Break --> Filler[Strip redundant filler patterns]
-    Filler --> Metrics[Calculate Readability Metrics: Flesch-Kincaid]
-    Metrics --> Final[Return HumanizeResult Payload]
+    Raw[Raw Text Input] --> Prof[Profiler Node: Identify Cliches]
+    Prof -->|Directive| Para[Paraphraser Node: Fetch patterns & rewrite]
+    Para -->|Draft Text| Critic[Critic Node: Throttled Quality Check]
+    
+    Critic -->|Rejected + Feedback| Para
+    Critic -->|Approved| Final[Return Final Draft]
 ```
 
-### 2. Trace: Web UI to Output
+### 2. State & Channels
+The StateGraph state is defined with vanilla JavaScript config channels:
+- `rawText`: The input machine-written text.
+- `directive`: Instruction guideline set by the profiler and amended with feedback by the critic.
+- `draftText`: The working copy of the humanized output.
+- `status`: Transition flag (`"approved"` or `"rejected"`) evaluated by the critic.
 
-1.  **Request Dispatch:** The user enters text in the text area of the HTML app served from [`src/gui.ts`](file:///workspaces/humanizer/src/gui.ts#L174) and clicks **RUN HUMANIZER_PROTOCOL**.
-2.  **Schema Validation:** An AJAX `POST` is sent to `/api/humanize`. The request schema is checked via Zod:
-    ```typescript
-    const GuiRequestSchema = z.object({
-      text: z.string().min(1),
-      style: z.enum(["balanced", "casual", ...]).optional(),
-      proMode: z.boolean().optional(),
-    });
-    ```
-3.  **Pro Mode Check (Conditional Gateway):**
-    *   **Pro Mode = `true`:** The application executes a remote `fetch` call to the external EdgeShop rewrite API (`https://api.edgeshop.ai/rewrite/humanize`). If this uplink succeeds, it returns the semantic rewriting result.
-    *   **Pro Mode = `false` or Network Failure:** The server falls back to [`humanizeText()`](file:///workspaces/humanizer/src/humanize.ts#L136), executing the local pipeline.
-4.  **Local Pipeline Processing:**
-    *   Regex matches in [`patterns.ts`](file:///workspaces/humanizer/src/patterns.ts) map patterns like `\bin order to\b` to `to` or `\bdelve into\b` to `look at`.
-    *   Long sentences are split: sentences over 25 words find a breakpoint at the closest comma or semicolon, breaking them into two distinct sentences.
-    *   Flesch-Kincaid grade levels are calculated before and after inside [`src/readability.ts`](file:///workspaces/humanizer/src/readability.ts#L34).
-5.  **Streaming & Logging:** The result payload is returned to the client browser, which simulates a console output using a client-side typewrite animation, while listing each transformation inside the `#EXECUTION_LOG` panel.
+### 3. Loop Throttling
+In `agents/critic.js`, the review cycle is throttled using a 2000ms delay:
+```javascript
+await new Promise((resolve) => setTimeout(resolve, 2000));
+```
+This reduces execution speed when looping in test pipelines and prevents hitting serverless API rate limits.
 
-### 3. Core Architectural Patterns
-
-*   **Model Context Protocol (MCP) Server Pattern:** Exposes two core capabilities (tools) to downstream LLM orchestrators:
-    1.  `detect`: Interrogates third-party analysis tools (Copyleaks, Hemingway) via an EdgeShop proxy to judge AI-ness.
-    2.  `humanize`: Runs local-first or cloud-enabled rewriting.
-*   **Rules Engine Pattern:** Local text processing avoids heavy machine learning libraries. It relies on deterministic regular expressions mapped to styles (`balanced`, `casual`, `formal`, `professional`, `technical`, `creative`).
-*   **Graceful Degradation Pattern:** If "Pro Mode" is requested but fails due to lack of internet access or API downtime, the system catches the exception, logs it, and falls back transparently to the local regex rules engine.
+### 4. Dynamic MCP Patterns & Tool Binding
+To resolve word/phrase replacement rules dynamically from the MCP server:
+- The **Paraphraser** defines a LangChain tool schema using Zod that requires a `tone` parameter.
+- It instantiates a `ChatHuggingFace` wrapper to bind this tool using `.bindTools([toolSchema])`.
+- It dynamically queries the local MCP server over stdio using `get_humanizer_patterns` with the tone parameter extracted from the `directive` (casual, formal, or balanced).
+- The **MCP Server** imports `src/patterns.js`, validates arguments via Zod, and queries the patterns. Since JS RegExp objects do not serialize directly to JSON, the MCP server maps RegExp instances using their `.source` string property.
+- The Paraphraser formats these retrieved regex rules and injects them directly into the Llama-3 system prompt, guiding the model's rewriting pass.
 
 ---
 
 ## Phase 4: Critical Complexities & "Gotchas"
 
-### 1. The Dynamic Sentence Splitter
-Unlike high-level NLP libraries (like compromise or natural), this system uses a lightweight regular expression splitter in [`src/readability.ts`](file:///workspaces/humanizer/src/readability.ts#L25-L28):
-```typescript
-export function splitSentences(text: string): string[] {
-  const pieces = text.match(/[^.!?]+[.!?]*/g);
-  return pieces?.length ? pieces.map((piece) => piece.trim()).filter(Boolean) : [text];
-}
-```
-> [!WARNING]
-> **Gotcha:** This splitter split sentences strictly on periods, question marks, and exclamation marks. Abbreviations (e.g., "Mr.", "e.g.", "Dr.") or decimals (e.g., "1.0.7") will trigger false positives, segmenting a single logical sentence into fragment chunks.
-
-### 2. Syllable Counting Heuristics
-Readability scoring relies on `countSyllables()` in [`src/readability.ts`](file:///workspaces/humanizer/src/readability.ts#L12-L23), which operates on character heuristics rather than a dictionary lookup:
-```typescript
-word = word.replace(/(?:[^laeiouy]es|ed|[^laeiouy]e)$/, "");
-word = word.replace(/^y/, "");
-const matches = word.match(/[aeiouy]{1,2}/g);
-```
-While highly performant, it is an approximation of English orthography and will deviate from perfect phonetic syllable counts on complex English words.
-
-### 3. Stdio Collision Risk in MCP Mode
+### 1. Stdio Collision Risk in MCP Mode
 Because the MCP protocol communicates over standard input (`stdin`) and standard output (`stdout`), any rogue `console.log()` calls written to stdout will corrupt the JSON-RPC stream, breaking the client connection.
 > [!IMPORTANT]
-> Any auxiliary logs, trace messages, or server notifications MUST be directed exclusively to `stderr` or the logger class, which routes `console.error` for errors and standard console outputs to `stderr` depending on configuration.
+> Any auxiliary logs, trace messages, or server notifications MUST be directed exclusively to `stderr` or a logger writing to `stderr`.
 
-### 4. EdgeShop AI External Dependency
-The "Pro Mode" rewrite and the "detect" tools both send raw text over the internet to `https://api.edgeshop.ai`. 
-*   **Privacy note:** In standard (non-Pro) mode, all data processing occurs entirely within the local node process boundaries. Clicking "Pro Mode" or invoking the `detect` tool will stream data to EdgeShop.
-*   **Timeouts:** The network request has a hard-coded client timeout of **30,000 milliseconds** (`30s`), handled by an `AbortController` in [`index.ts`](file:///workspaces/humanizer/src/index.ts#L111).
+### 2. Hugging Face Serverless API Key Initialization
+The LangChain `HuggingFaceInference` class throws an error at module load time if `apiKey` is empty or undefined.
+- **Gotcha Fix:** All Hugging Face model client instantiations are performed **lazily** inside the node functions. If the environment token (`process.env.HUGGINGFACEHUB_API_TOKEN`) is missing, they write descriptive warning logs to `stderr` and fallback to rule-based operations.
+
+### 3. Pure JavaScript Deployment
+Because there is no TypeScript compilation step, the `build` script in `package.json` simply ensures that `src/index.js` is executable (`chmod +x`). Docker runtime layers copy the `/src`, `/mcp-server`, `/agents`, and `/graph` files directly, accelerating container bootstrap time and lowering runtime image overhead.

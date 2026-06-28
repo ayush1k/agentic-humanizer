@@ -1,11 +1,4 @@
-export interface ReplacementPattern {
-  pattern: RegExp;
-  replacement: string;
-  context?: "formal" | "casual" | "technical" | "business" | "creative";
-  preserveCase?: boolean;
-}
-
-export const commonReplacements: ReplacementPattern[] = [
+export const commonReplacements = [
   { pattern: /\bin order to\b/gi, replacement: "to", context: "formal" },
   { pattern: /\bdue to the fact that\b/gi, replacement: "because", context: "formal" },
   { pattern: /\bthe fact that\b/gi, replacement: "that", context: "formal" },
@@ -33,7 +26,7 @@ export const commonReplacements: ReplacementPattern[] = [
   { pattern: /\bultimately\b/gi, replacement: "finally", context: "formal" },
 ];
 
-export const aiClichePatterns: ReplacementPattern[] = [
+export const aiClichePatterns = [
   { pattern: /\bdelve into\b/gi, replacement: "look at", context: "formal" },
   { pattern: /\ba tapestry of\b/gi, replacement: "a mix of", context: "creative" },
   { pattern: /\ba comprehensive guide\b/gi, replacement: "a full guide", context: "formal" },
@@ -61,7 +54,7 @@ export const aiClichePatterns: ReplacementPattern[] = [
   { pattern: /\bparadigm shift\b/gi, replacement: "big change", context: "business" },
 ];
 
-export const casualContractions: ReplacementPattern[] = [
+export const casualContractions = [
   { pattern: /\bdo not\b/gi, replacement: "don't", context: "casual" },
   { pattern: /\bcannot\b/gi, replacement: "can't", context: "casual" },
   { pattern: /\bwill not\b/gi, replacement: "won't", context: "casual" },
@@ -78,7 +71,7 @@ export const casualContractions: ReplacementPattern[] = [
   { pattern: /\bi am\b/gi, replacement: "I'm", context: "casual" },
 ];
 
-export const openerReplacements: ReplacementPattern[] = [
+export const openerReplacements = [
   { pattern: /^Additionally,\s*/i, replacement: "Also, ", context: "formal" },
   { pattern: /^Moreover,\s*/i, replacement: "Also, ", context: "formal" },
   { pattern: /^However,\s*/i, replacement: "But, ", context: "formal" },
@@ -88,7 +81,7 @@ export const openerReplacements: ReplacementPattern[] = [
   { pattern: /^As a result,\s*/i, replacement: "So, ", context: "formal" },
 ];
 
-export const businessPatterns: ReplacementPattern[] = [
+export const businessPatterns = [
   { pattern: /\bsynergy\b/gi, replacement: "collaboration", context: "business" },
   { pattern: /\bleverage\b/gi, replacement: "use", context: "business" },
   { pattern: /\bparadigm shift\b/gi, replacement: "major change", context: "business" },
@@ -101,7 +94,7 @@ export const businessPatterns: ReplacementPattern[] = [
   { pattern: /\bgoing forward\b/gi, replacement: "in the future", context: "business" },
 ];
 
-export const technicalPatterns: ReplacementPattern[] = [
+export const technicalPatterns = [
   { pattern: /\bimplement\b/gi, replacement: "add", context: "technical" },
   { pattern: /\butilize\b/gi, replacement: "use", context: "technical" },
   { pattern: /\bmethodology\b/gi, replacement: "method", context: "technical" },
@@ -114,7 +107,7 @@ export const technicalPatterns: ReplacementPattern[] = [
   { pattern: /\bfacilitate\b/gi, replacement: "help", context: "technical" },
 ];
 
-export const academicPatterns: ReplacementPattern[] = [
+export const academicPatterns = [
   { pattern: /\belucidate\b/gi, replacement: "explain", context: "formal" },
   { pattern: /\bdemonstrate\b/gi, replacement: "show", context: "formal" },
   { pattern: /\bexhibit\b/gi, replacement: "show", context: "formal" },
@@ -127,7 +120,7 @@ export const academicPatterns: ReplacementPattern[] = [
   { pattern: /\bnotwithstanding\b/gi, replacement: "despite", context: "formal" },
 ];
 
-export const creativePatterns: ReplacementPattern[] = [
+export const creativePatterns = [
   { pattern: /\bvery\b/gi, replacement: "", context: "creative" },
   { pattern: /\breally\b/gi, replacement: "", context: "creative" },
   { pattern: /\bquite\b/gi, replacement: "", context: "creative" },
@@ -140,15 +133,15 @@ export const creativePatterns: ReplacementPattern[] = [
   { pattern: /\bhighly\b/gi, replacement: "", context: "creative" },
 ];
 
-export const fillerPatterns: RegExp[] = [
+export const fillerPatterns = [
   /\bvery very\b/gi,
   /\breally really\b/gi,
   /\bquite quite\b/gi,
   /\bso so\b/gi,
 ];
 
-export function getPatternsForStyle(style: string): ReplacementPattern[] {
-  const patterns: ReplacementPattern[] = [
+export function getPatternsForStyle(style) {
+  const patterns = [
     ...commonReplacements, 
     ...openerReplacements,
     ...aiClichePatterns
