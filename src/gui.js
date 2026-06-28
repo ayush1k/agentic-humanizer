@@ -176,21 +176,11 @@ function renderPage() {
         </div>
 
         <div class="space-y-6">
-          <div class="space-y-3">
-            <span class="text-xs font-bold uppercase tracking-widest text-cyan-700 dark:text-cyan-400 block px-2"># PARAM_SELECT [TONE]</span>
-            <div id="tone-selector" class="flex flex-wrap gap-2 text-[10px] md:text-xs">
-              <button data-tone="balanced" class="tone-flag active px-3 py-1 border border-current transition-all uppercase">--balanced</button>
-              <button data-tone="casual" class="tone-flag px-3 py-1 border border-current transition-all uppercase">--casual</button>
-              <button data-tone="formal" class="tone-flag px-3 py-1 border border-current transition-all uppercase">--formal</button>
-              <button data-tone="professional" class="tone-flag px-3 py-1 border border-current transition-all uppercase">--professional</button>
-              <button data-tone="technical" class="tone-flag px-3 py-1 border border-current transition-all uppercase">--technical</button>
-              <button data-tone="creative" class="tone-flag px-3 py-1 border border-current transition-all uppercase">--creative</button>
-            </div>
-          </div>
+
 
           <div class="flex items-center space-x-4 pt-2">
             <button id="humanize" class="flex-1 terminal-border bg-current/5 hover:bg-current/10 font-bold py-3 uppercase tracking-widest transition-all active:scale-[0.98] disabled:opacity-30">
-              <span id="button-text">> RUN HUMANIZER_PROTOCOL</span>
+              <span id="button-text">> RUN COMPLIANCE CHECK</span>
             </button>
             <button id="sample" class="terminal-border bg-transparent hover:bg-current/5 px-6 py-3 uppercase text-xs transition-all">
               [ SAMPLE ]
@@ -279,13 +269,11 @@ function renderPage() {
     const outputPlaceholder = document.getElementById('output-placeholder');
     const changesList = document.getElementById('changes-list');
     const changesPlaceholder = document.getElementById('changes-placeholder');
-    const toneButtons = document.querySelectorAll('.tone-flag');
     const gradeButtons = document.querySelectorAll('.grade-flag');
     const buttonText = document.getElementById('button-text');
     const toast = document.getElementById('toast');
     const toastText = document.getElementById('toast-text');
 
-    let currentStyle = 'balanced';
     let selectedGradeLevel = '8';
 
     // Grade Selection
@@ -295,16 +283,6 @@ function renderPage() {
         btn.classList.add('active');
         selectedGradeLevel = btn.dataset.grade;
         status.textContent = \`> TARGET_GRADE_SET_TO: \${selectedGradeLevel}\`;
-      });
-    });
-
-    // Tone selection
-    toneButtons.forEach(btn => {
-      btn.addEventListener('click', () => {
-        toneButtons.forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        currentStyle = btn.dataset.tone;
-        status.textContent = \`> TONE_SET_TO: \${currentStyle.toUpperCase()}\`;
       });
     });
 
@@ -372,7 +350,7 @@ function renderPage() {
         const response = await fetch('/api/humanize', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text, style: currentStyle, gradeLevel: selectedGradeLevel })
+          body: JSON.stringify({ text, gradeLevel: selectedGradeLevel })
         });
 
         if (!response.ok) throw new Error('FAIL_CODE_01');
@@ -431,7 +409,7 @@ function renderPage() {
         showToast('FATAL_EXCEPTION');
       } finally {
         humanizeButton.disabled = false;
-        buttonText.textContent = '> RUN HUMANIZER_PROTOCOL';
+        buttonText.textContent = '> RUN COMPLIANCE CHECK';
       }
     });
 
