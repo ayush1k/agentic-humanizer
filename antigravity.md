@@ -7,7 +7,7 @@ This document tracks the current state, architecture, component inventory, and f
 ## 1. Project Overview & Scope
 The Plain Language Agent is a dual-interface text-rewriting application that modifies complex institutional documents (medical discharge instructions, legal contracts, government forms) to meet plain language readability standards.
 - **Target Grade Levels:** Grade 6 (Healthcare/Children), Grade 8 (General Government/Public), and Grade 10 (Legal/Technical Professional).
-- **GUI Interface:** Serves an interactive retro-terminal UI over HTTP featuring target grade selection and a readability metrics dashboard.
+- **GUI Interface:** Serves an interactive retro-terminal UI over HTTP featuring target grade selection, a readability metrics panel with simplification delta, and an execution log dashboard.
 - **MCP Server Interface:** Exposes the `get_plain_language_patterns` tool to retrieve word-replacement rules.
 - **Agentic Workflow:** Employs a multi-agent LangGraph workflow (Profiler -> Paraphraser -> Critic) to process, rewrite, and evaluate text iteratively.
 

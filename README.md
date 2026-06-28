@@ -11,7 +11,7 @@ For a detailed technical analysis of the execution lifecycle, loops, and design 
 *   **Agentic LangGraph Workflow:** Implements a structured multi-agent StateGraph (Profiler, Paraphraser, and Critic) that iteratively refines and evaluates text readability.
 *   **Gemini & Llama-3 Hybrid Inference:** Integrates Google Gemini (`gemini-2.5-flash`) for structural analysis/review, and Hugging Face Llama-3 (`Llama-3-8B-Instruct`) for copy generation.
 *   **Model Context Protocol (MCP) Integration:** Queries a local stdio-based MCP server in real-time to fetch target plain-language rules based on grade levels.
-*   **Terminal GUI Dashboard:** Serves an interactive monospaced retro-terminal interface to select grade targets, submit requests, and inspect live before-and-after Flesch-Kincaid grade scores.
+*   **Terminal GUI Dashboard:** Serves an interactive monospaced retro-terminal interface to select grade targets, submit requests, and inspect live before-and-after Flesch-Kincaid grade scores alongside a dynamic simplification delta indicator.
 *   **Pure JavaScript ESM Architecture:** Built entirely on vanilla Node.js ES Modules, running directly from source with zero build compilation overhead.
 
 ---

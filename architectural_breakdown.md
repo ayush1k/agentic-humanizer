@@ -9,7 +9,7 @@ This document provides a textbook-level architectural breakdown of the **Plain L
 ### 1. The Core Problem
 Complex institutional text—such as medical discharge instructions, legal contracts, insurance policies, and government forms—often uses vocabulary and syntax that is difficult for general audiences or patients to understand.
 
-This repository solves this problem by providing an **agentic plain language compliance tool** that rewrites complex text to meet Flesch-Kincaid readability standards. It targets Grade 6 for healthcare/children, Grade 8 for general public/government (the US Plain Writing Act standard), and Grade 10 for legal/technical professional documents. It functions both as an **interactive web-based GUI** and as an **integration-ready Model Context Protocol (MCP) server**.
+This repository solves this problem by providing an **agentic plain language compliance tool** that rewrites complex text to meet Flesch-Kincaid readability standards. It targets Grade 6 for healthcare/children, Grade 8 for general public/government (the US Plain Writing Act standard), and Grade 10 for legal/technical professional documents. It tracks Flesch-Kincaid readability metrics, calculates and displays the simplification delta, and functions both as an **interactive web-based GUI** and as an **integration-ready Model Context Protocol (MCP) server**.
 
 ### 2. High-Level Tech Stack
 
